@@ -1,4 +1,4 @@
-use std::fs::{File, read_dir, ReadDir};
+use std::fs::{File, read_dir};
 use std::io::{BufRead, BufReader, Error, Write};
 use std::path::{Path, PathBuf};
 use clap::{Parser};

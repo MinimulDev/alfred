@@ -1,0 +1,35 @@
+name: "deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "version number"
+        required: true
+        type: string
+
+jobs:
+  deployment_job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Bump version and push tag
+        uses: mathieudutour/github-tag-action@v6.0
+        id: tag
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ inputs.version }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
+      - name: Create Release
+        uses: ncipollo/release-action@v1.10.0
+        with:
+          tag: ${{ steps.tag.new_tag }}
+          artifacts: "target/release/alfred"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
