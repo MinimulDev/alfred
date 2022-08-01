@@ -21,6 +21,7 @@ jobs:
           custom_tag: ${{ inputs.version }}
       - uses: actions-rs/toolchain@v1
         with:
+          target: "x86_64-apple-darwin"
           toolchain: stable
       - uses: actions-rs/cargo@v1
         with:
