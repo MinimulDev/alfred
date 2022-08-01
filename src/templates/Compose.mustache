@@ -1,0 +1,54 @@
+package {{package}}
+
+import androidx.compose.foundation.*;
+import androidx.compose.foundation.layout.*;
+import androidx.compose.runtime.Composable;
+import androidx.compose.runtime.collectAsState;
+import androidx.compose.runtime.getValue;
+import {{uistate_package}};
+import {{viewstate_viewmodel_package}};
+
+@Composable
+fun {{name}}(
+    viewModel: ViewStateViewModel<*>,
+    onViewCreated: (vm: ViewStateViewModel<*>
+) {
+    val viewState by viewModel.viewState.collectAsState()
+
+    DisposableEffect(Unit) {
+        onViewCreated(viewModel)
+        onDispose {
+            viewModel.cleanup()
+        }
+    }
+
+    BaseContainer {
+        when(state = viewState.state) {
+            is UiState.Loading -> Loading()
+            is UiState.Error -> Error()
+            is UiState.Success -> Content()
+        }
+    }
+}
+
+@Composable
+private fun BaseContainer(content: @Composable () -> Unit) {
+    Box {
+        content()
+    }
+}
+
+@Composable
+private fun Loading() {
+    TODO("not implemented")
+}
+
+@Composable
+private fun Error() {
+    TODO("not implemented")
+}
+
+@Composable
+private fun Content() {
+    TODO("not implemented")
+}

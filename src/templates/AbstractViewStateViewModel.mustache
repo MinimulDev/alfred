@@ -1,0 +1,30 @@
+package {{package}}
+
+import kotlinx.coroutines.*;
+import kotlinx.coroutines.flow.MutableStateFlow;
+
+expect class PlatformViewModel constructor() {
+    open fun cleanup()
+}
+
+open class ViewStateViewModel<T>(defaultValue: T) : PlatformViewModel(){{interfaces}} {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private val _viewState = MutableStateFlow<T>(defaultValue)
+    val viewState: StateFlow<T> = _viewState
+
+    fun launch(block: suspend CoroutineScope.() -> Unit) = scope.launch {
+        block()
+    }
+
+    fun updateViewState(block: (prev: T) -> T) {
+        val prev = _viewState.value
+        val updated = block(prev)
+        _viewState.value = updated
+    }
+
+    override fun cleanup() {
+        super.cleanup()
+        scope.coroutineContext.cancelChildren()
+    }
+}
