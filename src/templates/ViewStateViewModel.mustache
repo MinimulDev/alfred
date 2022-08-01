@@ -1,0 +1,29 @@
+package {{package}}
+
+private typealias SuccessState = UiState.Success<{{name}}.Success, {{name}}.Error>
+private typealias ErrorState = UiState.Error<{{name}}.Success, {{name}}.Error>
+
+class {{name}} : ViewStateViewModel<{{name}}.ViewState>(ViewState()) {
+
+    data class ViewState(
+        val ui: UiState<Success, Error> = UiState.Loading()
+    )
+
+    object Success
+
+    object Error
+
+    private val initializeJob = AtomicJob()
+
+    fun initialize() {
+        initializeJob.value = launch {
+            // TODO: replace me
+        }
+    }
+
+    override fun cleanup() {
+        super.cleanup()
+        initializeJob.cleanup()
+    }
+
+}

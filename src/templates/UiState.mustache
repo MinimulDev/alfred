@@ -1,0 +1,7 @@
+package {{package}}
+
+sealed class UiState<out S : Any, out E : Any> {
+    class Loading<S: Any, E: Any> : UiState<S, E>()
+    data class Success<S : Any, E: Any>(val state: S) : UiState<S, E>()
+    data class Error<S: Any, E: Any>(val state: E) : UiState<S, E>
+}

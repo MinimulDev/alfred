@@ -1,0 +1,15 @@
+package {{package}}
+
+class AtomicJob() {
+
+    private val job = AtomicReference<Job?>(null)
+    val value: Job? get() = job.value
+        set(v) {
+            job.value = v
+        }
+
+    fun cleanup() {
+        job.value.cancelChildren()
+    }
+
+}
