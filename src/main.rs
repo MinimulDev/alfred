@@ -42,7 +42,7 @@ struct AndroidConfig {
 }
 
 #[derive(Parser, Debug)]
-#[clap(version)]
+#[clap()]
 struct Args {
     #[clap(subcommand)]
     commands: Option<Commands>,
