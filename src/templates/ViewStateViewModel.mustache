@@ -1,5 +1,8 @@
 package {{package}}
 
+import {{atomicjob_package}}
+import {{uistate_package}}
+
 private typealias SuccessState = UiState.Success<{{name}}.Success, {{name}}.Error>
 private typealias ErrorState = UiState.Error<{{name}}.Success, {{name}}.Error>
 
