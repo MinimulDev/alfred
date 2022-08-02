@@ -13,6 +13,7 @@ const CFG_YAML: &str = "alfred.yaml";
 const VIEWSTATEVIEWMODEL: &str = "ViewStateViewModel";
 const UISTATE: &str = "UiState";
 const PLATFORMVIEWMODEL: &str = "PlatformViewModel";
+const ATOMICJOB: &str = "AtomicJob";
 const DOT_KT: &str = ".kt";
 
 fn kt_file(name: &str) -> String {
@@ -209,6 +210,16 @@ fn handle_viewmodel(config: &AlfredConfig) -> Result<(), Error> {
     let generator = Handlebars::new();
     let vm_string = include_str!("./templates/ViewStateViewModel.mustache");
 
+    let common_dir = common_package_dir(config)?;
+
+    let common_flat = flatten_dir(common_dir.as_path());
+
+    let uistate_path = find_kt_file(&common_flat, UISTATE);
+    let atomicjob_path = find_kt_file(&common_flat, ATOMICJOB);
+
+    let uistate_package = find_package_name(&uistate_path).unwrap();
+    let atomicjob_package = find_package_name(&atomicjob_path).unwrap();
+
     let base_package = str::replace(&config.common.base_package_dir, "/", ".");
 
     let full_package = format!("{}.{}", base_package, package);
@@ -218,7 +229,9 @@ fn handle_viewmodel(config: &AlfredConfig) -> Result<(), Error> {
         vm_string,
         &json!({
             "name": class_name,
-            "package": full_package
+            "package": full_package,
+            "uistate_package": uistate_package,
+            "atomicjob_package": atomicjob_package
         }),
     )?;
 
@@ -407,6 +420,24 @@ fn add_missing_viewmodel_classes(config: &AlfredConfig) -> Result<(), Error> {
                 }),
             )?;
             create_file(common_main_root_str, UISTATE, template)?;
+        }
+        Some(_) => {
+            // nothing to do here
+        }
+    }
+
+    let atomicjob = find_kt_file_optional(&common_flat, ATOMICJOB);
+
+    match atomicjob {
+        None => {
+            let template = render_template_or_err(
+                &handlebars,
+                include_str!("./templates/AtomicJob.mustache"),
+                &json!({
+                        "package": package
+                }),
+            )?;
+            create_file(common_main_root_str, ATOMICJOB, template)?;
         }
         Some(_) => {
             // nothing to do here

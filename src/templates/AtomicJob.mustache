@@ -1,15 +1,27 @@
 package {{package}}
 
-class AtomicJob() {
+import co.touchlab.stately.concurrency.AtomicReference
+import co.touchlab.stately.concurrency.value
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelChildren
+
+class AtomicJob {
 
     private val job = AtomicReference<Job?>(null)
-    val value: Job? get() = job.value
+
+    var value
+        get() = job.get()
         set(v) {
             job.value = v
         }
 
     fun cleanup() {
-        job.value.cancelChildren()
+        job.value?.cancelChildren()
+        job.value = null
+    }
+
+    fun cancel() {
+        job.value?.cancelChildren()
     }
 
 }
