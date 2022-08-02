@@ -4,7 +4,6 @@ android:
 common:
   module: "commonMain"
   base_package_dir: "tmp"
-  base_viewmodel_name: "ViewStateViewModel"
   android_module: "androidMain"
   ios_module: "iosMain"
   use_koin: true
