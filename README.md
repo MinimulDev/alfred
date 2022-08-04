@@ -18,14 +18,17 @@ Alfred is an opinionated Kotlin Multiplatform Mobile CLI for creating common and
 
 ```yaml
 android:
+  module: "androidApp" # android platform module
   base_package_dir: "tmp" # base package directory (separated by '/') of android module, can be empty to always provide fully qualified package.
 
 common:
-  module: "commonMain" # name of common module defaults to "commonMain"
-  base_package_dir: "tmp" #  base package directory (separated by '/') of common module, can be empty to always provide fully qualified package.
-  android_module: "androidMain" # name of common android module defaults to "androidMain"
-  ios_module: "iosMain" # name of common ios module defaults to "iosMain"
-  use_koin: true # indicates where to include Koin definitions for base classes if not present.
+  module: "common" # name of common module defaults to "common"
+  base_package_dir: "tmp" #  base package directory (separated by '/') of common source set, can be empty to always provide fully qualified package.
+  common_source_set: "commonMain" # name of common main source set defaults to "commonMain"
+  android_source_set: "androidMain" # name of common android source set defaults to "androidMain"
+  ios_source_set: "iosMain" # name of common ios source set defaults to "iosMain"
+
+use_koin: true # indicates where to include Koin definitions for base classes if not present.
 ```
 
 ## Examples
@@ -88,8 +91,9 @@ import tmp.ViewStateViewModel;
 @Composable
 fun Foobar(
     viewModel: ViewStateViewModel<*>,
-    onViewCreated: (vm: ViewStateViewModel<*>
-) {
+    onViewCreated: (
+        vm: ViewStateViewModel<*>
+    ) {
     val viewState by viewModel.viewState.collectAsState()
 
     DisposableEffect(Unit) {
@@ -100,7 +104,7 @@ fun Foobar(
     }
 
     BaseContainer {
-        when(state = viewState.state) {
+        when (state = viewState.state) {
             is UiState.Loading -> Loading()
             is UiState.Error -> Error()
             is UiState.Success -> Content()
