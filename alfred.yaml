@@ -1,9 +1,11 @@
 android:
+  module: "androidApp"
   base_package_dir: "tmp"
 
 common:
-  module: "commonMain"
+  module: "common"
+  source_set: "commonMain"
   base_package_dir: "tmp"
-  android_module: "androidMain"
-  ios_module: "iosMain"
+  android_source_set: "androidMain"
+  ios_source_set: "iosMain"
   use_koin: true

@@ -1,3 +1,5 @@
+mod constants;
+
 use std::fs::{File, read_dir};
 use std::io::{BufRead, BufReader, Error, Write};
 use std::path::{Path, PathBuf};
@@ -8,13 +10,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json};
 use walkdir::{DirEntry, WalkDir};
-
-const CFG_YAML: &str = "alfred.yaml";
-const VIEWSTATEVIEWMODEL: &str = "ViewStateViewModel";
-const UISTATE: &str = "UiState";
-const PLATFORMVIEWMODEL: &str = "PlatformViewModel";
-const ATOMICJOB: &str = "AtomicJob";
-const DOT_KT: &str = ".kt";
+use constants::*;
 
 fn kt_file(name: &str) -> String {
     format!("{}{}", name, DOT_KT)
@@ -22,10 +18,11 @@ fn kt_file(name: &str) -> String {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct CommonConfig {
-    base_package_dir: String,
     module: Option<String>,
-    android_module: Option<String>,
-    ios_module: Option<String>,
+    base_package_dir: String,
+    common_source_set: Option<String>,
+    android_source_set: Option<String>,
+    ios_source_set: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -53,8 +50,9 @@ struct Args {
 
 #[derive(clap::Subcommand, Debug)]
 enum Commands {
-    /// create sub-command
+    /// runs create command with for a given sub-command. Run `alfred help create` for more info.
     Create(SubcommandCreate),
+    /// initializes project with necessary template files. Prints list of newly created files. Run `alfred help init` for more info.
     Init(SubcommandInit),
 }
 
@@ -69,11 +67,11 @@ struct SubcommandInit {}
 
 #[derive(clap::Subcommand, Debug)]
 enum SubcommandCreateCommands {
-    /// creates a viewmodel relative to `viewmodel_root_directory`
+    /// creates a common viewmodel
     Viewmodel(ViewmodelSubCommand),
-    /// creates a viewmodel relative to `android_ui_root_directory`
+    /// creates an android composable
     Composable(ComposableSubCommand),
-    /// creates viewmodel and composable function
+    /// creates common viewmodel and android composable
     Feature(FeatureSubCommand),
 }
 
@@ -228,10 +226,10 @@ fn handle_viewmodel(config: &AlfredConfig) -> Result<(), Error> {
         &generator,
         vm_string,
         &json!({
-            "name": class_name,
-            "package": full_package,
-            "uistate_package": uistate_package,
-            "atomicjob_package": atomicjob_package
+            NAME: class_name,
+            PACKAGE: full_package,
+            UISTATE_PACKAGE: uistate_package,
+            ATOMICJOB_PACKAGE: atomicjob_package
         }),
     )?;
 
@@ -241,7 +239,7 @@ fn handle_viewmodel(config: &AlfredConfig) -> Result<(), Error> {
 }
 
 fn handle_composable(config: &AlfredConfig) -> Result<(), Error> {
-    let android_base = android_dir(config, "androidApp")?;
+    let android_base = android_dir(config, DEFAULT_ANDROID_MODULE)?;
     let package =
         prompt_package_or_err(format!("Composable package (relative to {})", android_base.to_str().unwrap()).as_str())?;
     let class_name = prompt_class_name("Composable class name")?;
@@ -250,7 +248,7 @@ fn handle_composable(config: &AlfredConfig) -> Result<(), Error> {
 
     let handlebars = Handlebars::new();
 
-    let mut android_base_path = android_dir(config, "androidApp")?;
+    let mut android_base_path = android_dir(config, DEFAULT_ANDROID_MODULE)?;
     let package_as_dir = str::replace(package.as_str(), ".", "/").to_owned();
     android_base_path.push(package_as_dir);
 
@@ -278,10 +276,10 @@ fn handle_composable(config: &AlfredConfig) -> Result<(), Error> {
         &handlebars,
         include_str!("./templates/Compose.mustache"),
         &json!({
-            "name": class_name,
-            "uistate_package": uistate_package,
-            "viewstate_viewmodel_package": viewstate_package,
-            "package": full_package
+            NAME: class_name,
+            UISTATE_PACKAGE: uistate_package,
+            VIEWSTATE_VIEWMODEL_PACKAGE: viewstate_package,
+            PACKAGE: full_package
         }),
     )?;
 
@@ -375,7 +373,7 @@ fn add_missing_viewmodel_classes(config: &AlfredConfig) -> Result<(), Error> {
     let ios_main_path = common_ios_package_dir(config)?;
     let ios_main_str = ios_main_path.to_str().unwrap();
 
-    let common_flat = flatten_dir(common_main_dir(config, "commonMain")?.as_path());
+    let common_flat = flatten_dir(common_main_dir(config, DEFAULT_COMMON_SOURCE_SET)?.as_path());
     let android_flat = flatten_dir(android_main_path.as_path());
     let ios_flat = flatten_dir(ios_main_path.as_path());
 
@@ -397,8 +395,8 @@ fn add_missing_viewmodel_classes(config: &AlfredConfig) -> Result<(), Error> {
                 &handlebars,
                 include_str!("./templates/AbstractViewStateViewModel.mustache"),
                 &json!({
-                        "package": package,
-                        "interfaces": viewstate_viewmodel_interfaces
+                        PACKAGE: package,
+                        INTERFACES: viewstate_viewmodel_interfaces
                 }),
             )?;
             create_file(common_main_root_str, VIEWSTATEVIEWMODEL, template)?;
@@ -416,7 +414,7 @@ fn add_missing_viewmodel_classes(config: &AlfredConfig) -> Result<(), Error> {
                 &handlebars,
                 include_str!("./templates/UiState.mustache"),
                 &json!({
-                        "package": package
+                        PACKAGE: package
                 }),
             )?;
             create_file(common_main_root_str, UISTATE, template)?;
@@ -434,7 +432,7 @@ fn add_missing_viewmodel_classes(config: &AlfredConfig) -> Result<(), Error> {
                 &handlebars,
                 include_str!("./templates/AtomicJob.mustache"),
                 &json!({
-                        "package": package
+                        PACKAGE: package
                 }),
             )?;
             create_file(common_main_root_str, ATOMICJOB, template)?;
@@ -452,7 +450,7 @@ fn add_missing_viewmodel_classes(config: &AlfredConfig) -> Result<(), Error> {
                 &handlebars,
                 include_str!("./templates/AndroidPlatformViewModel.mustache"),
                 &json!({
-                        "package": package
+                        PACKAGE: package
                 }),
             )?;
             create_file(android_main_str, PLATFORMVIEWMODEL, template)?;
@@ -470,7 +468,7 @@ fn add_missing_viewmodel_classes(config: &AlfredConfig) -> Result<(), Error> {
                 &handlebars,
                 include_str!("./templates/IosPlatformViewModel.mustache"),
                 &json!({
-                        "package": package
+                        PACKAGE: package
                 }),
             )?;
             create_file(ios_main_str, PLATFORMVIEWMODEL, template)?;
@@ -501,7 +499,7 @@ fn create_file(root: &str, name: &str, content: String) -> Result<(), Error> {
     let mut path_buf = PathBuf::new();
     path_buf.push(root);
     let name = String::from(name);
-    let _name = format!("{}{}", name, DOT_KT);
+    let _name = kt_file(name.as_str());
     path_buf.push(_name);
     println!("creating file {}", path_buf.to_str().unwrap());
     let prefix = path_buf.parent().unwrap();
@@ -519,14 +517,15 @@ fn android_dir(config: &AlfredConfig, default: &str) -> Result<PathBuf, Error> {
     let mut dir = PathBuf::new();
     dir.push(cwd_path);
     dir.push(module);
-    dir.push("src/main");
+    dir.push(SRC);
+    dir.push(MAIN);
 
     let _dir = read_dir(dir.clone());
 
-    if folder_exists(&dir, "kotlin") {
-        dir.push("kotlin")
-    } else if folder_exists(&dir, "java") {
-        dir.push("java")
+    if folder_exists(&dir, KOTLIN) {
+        dir.push(KOTLIN)
+    } else if folder_exists(&dir, JAVA) {
+        dir.push(JAVA)
     }
 
     dir.push(&config.android.base_package_dir);
@@ -544,42 +543,46 @@ fn folder_exists(base: &PathBuf, name: &str) -> bool {
 fn common_main_dir(config: &AlfredConfig, default: &str) -> Result<Box<PathBuf>, Error> {
     let cwd_path = std::env::current_dir()?.to_str().unwrap().to_owned();
 
-    let module = config.common.module.to_owned().unwrap_or_else(|| String::from(default));
+    let source_set = config.common.common_source_set.to_owned().unwrap_or_else(|| String::from(default));
+    let module = config.common.module.to_owned().unwrap_or_else(|| String::from(DEFAULT_COMMON_MODULE));
 
     let mut dir = PathBuf::new();
     dir.push(cwd_path);
-    dir.push("common/src/");
     dir.push(module);
+    dir.push(SRC);
+    dir.push(source_set);
 
     Ok(Box::new(dir))
 }
 
-/// returns full path to common base package directory
+/// returns full path to common source set package directory
 fn common_package_dir(config: &AlfredConfig) -> Result<Box<PathBuf>, Error> {
-    module_package_dir(config, &config.common.module, "commonMain")
+    source_set_package_dir(config, &config.common.common_source_set, DEFAULT_COMMON_SOURCE_SET)
 }
 
-/// returns full path to common android base package directory
+/// returns full path to common android source set package directory
 fn common_android_package_dir(config: &AlfredConfig) -> Result<Box<PathBuf>, Error> {
-    module_package_dir(config, &config.common.android_module, "androidMain")
+    source_set_package_dir(config, &config.common.android_source_set, DEFAULT_ANDROID_SOURCE_SET)
 }
 
-/// returns full path to common ios base package directory
+/// returns full path to common ios source set package directory
 fn common_ios_package_dir(config: &AlfredConfig) -> Result<Box<PathBuf>, Error> {
-    module_package_dir(config, &config.common.ios_module, "iosMain")
+    source_set_package_dir(config, &config.common.ios_source_set, DEFAULT_IOS_SOURCE_SET)
 }
 
-/// returns full path to common module package directory
-fn module_package_dir(config: &AlfredConfig, module: &Option<String>, default: &str) -> Result<Box<PathBuf>, Error> {
+/// returns full path to source set package directory
+fn source_set_package_dir(config: &AlfredConfig, source_set: &Option<String>, default: &str) -> Result<Box<PathBuf>, Error> {
     let cwd_path = std::env::current_dir()?.to_str().unwrap().to_owned();
 
-    let module = module.to_owned().unwrap_or_else(|| String::from(default));
+    let source_set = source_set.to_owned().unwrap_or_else(|| String::from(default));
+    let module = config.common.module.to_owned().unwrap_or_else(|| String::from(DEFAULT_COMMON_MODULE));
 
     let mut dir = PathBuf::new();
     dir.push(cwd_path);
-    dir.push("common/src");
     dir.push(module);
-    dir.push("kotlin");
+    dir.push(SRC);
+    dir.push(source_set);
+    dir.push(KOTLIN);
     dir.push(&config.common.base_package_dir);
 
     Ok(Box::new(dir))
